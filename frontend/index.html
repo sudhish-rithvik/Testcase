@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TestCaseAI</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🏥</span>
+                <span>TestCaseAI</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Dashboard</a></li>
+                <li><a href="upload.html">Upload PDF</a></li>
+                <li><a href="history.html">History</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Healthcare Test Case Generation Overview</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-4" style="margin-bottom: 2rem;">
+            <div class="stat-card" style="background: linear-gradient(135deg, #2563eb, #3b82f6);">
+                <div class="stat-value" id="totalFiles">0</div>
+                <div class="stat-label">Total PDFs Analyzed</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #14b8a6);">
+                <div class="stat-value" id="totalTestCases">0</div>
+                <div class="stat-label">Test Cases Generated</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);">
+                <div class="stat-value" id="totalPages">0</div>
+                <div class="stat-label">Pages Processed</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Actions</h2>
+                </div>
+                <div class="card-content">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <a href="upload.html" class="btn btn-primary" style="justify-content: center;">
+                            📤 Upload New PDF
+                        </a>
+                        <a href="history.html" class="btn btn-secondary" style="justify-content: center;">
+                            📜 View History
+                        </a>
+                        <button onclick="refreshStats()" class="btn btn-secondary" style="justify-content: center;">
+                            🔄 Refresh Statistics
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Activity</h2>
+                </div>
+                <div class="card-content">
+                    <div id="recentActivity">
+                        <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                            Loading recent activity...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-header">
+                <h2 class="card-title">Features</h2>
+            </div>
+            <div class="card-content">
+                <div class="grid grid-3">
+                    <div style="text-align: center; padding: 1.5rem;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🤖</div>
+                        <h3 style="margin-bottom: 0.5rem;">AI-Powered</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            Gemini 2.5 Flash generates comprehensive healthcare test cases
+                        </p>
+                    </div>
+                    <div style="text-align: center; padding: 1.5rem;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">☁️</div>
+                        <h3 style="margin-bottom: 0.5rem;">Cloud Storage</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            AWS S3 and DynamoDB for reliable, scalable storage
+                        </p>
+                    </div>
+                    <div style="text-align: center; padding: 1.5rem;">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏥</div>
+                        <h3 style="margin-bottom: 0.5rem;">Healthcare Focus</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                            HIPAA-compliant test cases for medical software
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

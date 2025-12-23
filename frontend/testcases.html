@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cases - TestCaseAI</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .testcase-box {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-left: 4px solid var(--primary-blue);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .testcase-box:hover {
+            border-left-color: var(--secondary-teal);
+            box-shadow: var(--shadow-md);
+        }
+
+        .testcase-id {
+            background: var(--primary-blue);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-block;
+            margin-bottom: 0.75rem;
+        }
+
+        .testcase-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .testcase-section {
+            margin-bottom: 1rem;
+        }
+
+        .testcase-section h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .testcase-content {
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        .copy-button {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.25rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .copy-button:hover {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🏥</span>
+                <span>TestCaseAI</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="upload.html">Upload PDF</a></li>
+                <li><a href="history.html">History</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 class="page-title">Test Cases</h1>
+                <p class="page-subtitle" id="docTitle">Generated test cases will appear here</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button onclick="downloadJSON()" class="btn btn-primary">
+                    📥 Download JSON
+                </button>
+                <button onclick="downloadMarkdown()" class="btn btn-secondary">
+                    📝 Download Markdown
+                </button>
+            </div>
+        </div>
+
+        <div id="testCasesContainer">
+            <!-- Test cases will be dynamically loaded here -->
+            <div class="card" style="text-align: center; padding: 3rem;">
+                <p style="font-size: 3rem; margin-bottom: 1rem;">📋</p>
+                <h3 style="margin-bottom: 0.5rem;">No Test Cases Loaded</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Upload a PDF or select from history to view test cases
+                </p>
+                <a href="upload.html" class="btn btn-primary">Upload PDF</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/testcases.js"></script>
+</body>
+
+</html>
