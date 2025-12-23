@@ -1,0 +1,46 @@
+================================================================================
+LISTING ALL FILES IN DYNAMODB
+================================================================================
+
+Found 4 files:
+
+1. File ID: 09ab94b2-969d-4483-8549-fb918608c872
+   Filename: patientreport.pdf
+   Status: partial_success
+   Has test_cases field: False
+
+2. File ID: 2ea7a705-ce0e-4dbc-a7a6-af46cbc567ee
+   Filename: healthreport.pdf
+   Status: success
+   Has test_cases field: False
+
+3. File ID: afe7fbb1-0d0d-43e7-bcde-746dc2218c86
+   Filename: patientreport.pdf
+   Status: success
+   Has test_cases field: True
+   Test cases length: 37410 characters
+   Test cases preview (first 200 chars): # TEST SUITE: Patient Health Report & Clinical Interpretation System
+
+## 📋 FEATURE OVERVIEW
+- **Description**: This system processes patient health data, applies predefined clinical interpretation rul
+
+4. File ID: 4a2e2014-e977-40d8-830d-6e51da5f3e62
+   Filename: healthreport.pdf
+   Status: partial_success
+   Has test_cases field: False
+
+================================================================================
+DETAILED INFO FOR FIRST FILE: 09ab94b2-969d-4483-8549-fb918608c872
+================================================================================
+
+All metadata keys: ['filename', 'extracted_text_length', 'created_at', 'file_id', 'status', 'pdf_s3_url', 'error', 'pages']
+
+Metadata:
+  filename: patientreport.pdf
+  extracted_text_length: 4340
+  created_at: 2025-12-23T16:47:38.462935
+  file_id: 09ab94b2-969d-4483-8549-fb918608c872
+  status: partial_success
+  pdf_s3_url: s3://testcaseai-pdf-storage/pdfs/2025-12-23/09ab94b2-969d-4483-8549-fb918608c872_patientreport.pdf
+  error: Test case generation failed: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API Key not found. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API Key not found. Please pass a valid API key.'}]}}
+  pages: 4

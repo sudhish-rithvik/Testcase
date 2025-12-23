@@ -195,7 +195,17 @@ async def get_file_info(file_id: str):
         if not result["success"]:
             raise HTTPException(status_code=404, detail="File not found")
         
-        return result["metadata"]
+        metadata = result["metadata"]
+        
+        # DEBUG: Print what we're returning
+        print(f"DEBUG - File ID: {file_id}")
+        print(f"DEBUG - Metadata keys: {metadata.keys()}")
+        print(f"DEBUG - Has test_cases: {'test_cases' in metadata}")
+        if 'test_cases' in metadata:
+            print(f"DEBUG - Test cases length: {len(metadata.get('test_cases', ''))}")
+            print(f"DEBUG - Test cases preview: {metadata.get('test_cases', '')[:200]}")
+        
+        return metadata
         
     except HTTPException:
         raise

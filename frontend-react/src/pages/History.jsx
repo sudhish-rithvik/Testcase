@@ -36,6 +36,17 @@ function History() {
         }
     };
 
+    const handleDelete = async (fileId, filename) => {
+        if (window.confirm(`Delete "${filename}"? This cannot be undone.`)) {
+            try {
+                await api.deleteFile(fileId);
+                loadHistory(); // Refresh the list
+            } catch (error) {
+                alert('Delete failed: ' + error.message);
+            }
+        }
+    };
+
     const formatSize = (chars) => {
         if (chars < 1000) return chars;
         if (chars < 1000000) return (chars / 1000).toFixed(1) + 'K';
@@ -121,12 +132,22 @@ function History() {
                             </div>
                         </Link>
 
-                        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(file.file_id, file.filename);
+                                }}
+                                className="btn btn-secondary"
+                                style={{ flex: '1 1 auto', minWidth: '120px', backgroundColor: 'var(--error-red)', color: 'white', border: 'none' }}
+                            >
+                                🗑️ Delete
+                            </button>
                             <a
                                 href={api.downloadPDF(file.file_id)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="btn btn-secondary"
-                                style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
+                                style={{ flex: '1 1 auto', minWidth: '100px', textAlign: 'center', textDecoration: 'none' }}
                                 download
                             >
                                 📥 PDF
@@ -135,7 +156,7 @@ function History() {
                                 href={api.downloadJSON(file.file_id)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="btn btn-secondary"
-                                style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
+                                style={{ flex: '1 1 auto', minWidth: '100px', textAlign: 'center', textDecoration: 'none' }}
                                 download
                             >
                                 📥 JSON
@@ -144,7 +165,7 @@ function History() {
                                 href={api.downloadMarkdown(file.file_id)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="btn btn-secondary"
-                                style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
+                                style={{ flex: '1 1 auto', minWidth: '120px', textAlign: 'center', textDecoration: 'none' }}
                                 download
                             >
                                 📥 Markdown

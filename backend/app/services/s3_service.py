@@ -1,6 +1,5 @@
 import boto3
 import os
-import uuid
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -10,7 +9,7 @@ load_dotenv()
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION")
-S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
+S3_BUCKET_NAME = "testcaseai-pdf-storage"
 
 # Initialize S3 client
 s3_client = boto3.client(
@@ -21,42 +20,22 @@ s3_client = boto3.client(
 )
 
 
-def generate_s3_key(filename: str, folder: str = "pdfs") -> tuple:
-    """
-    Generate organized S3 key with date-based structure.
-    
-    Args:
-        filename: Original filename
-        folder: Folder type (pdfs, testcases)
-        
-    Returns:
-        tuple of (s3_key, file_id)
-    """
-    now = datetime.now()
-    file_id = str(uuid.uuid4())
-    
-    # Clean filename
-    clean_filename = filename.replace(" ", "_")
-    
-    # Create key: folder/YYYY/MM/DD/uuid-filename
-    s3_key = f"{folder}/{now.year}/{now.month:02d}/{now.day:02d}/{file_id}-{clean_filename}"
-    
-    return s3_key, file_id
-
-
-def upload_pdf_to_s3(file_bytes: bytes, filename: str) -> dict:
+def upload_pdf_to_s3(file_bytes: bytes, filename: str, file_id: str) -> dict:
     """
     Upload PDF file to S3.
     
     Args:
         file_bytes: PDF file content as bytes
         filename: Original filename
+        file_id: Unique file identifier
         
     Returns:
-        dict with s3_key, file_id, and s3_url
+        dict with success status and S3 URL
     """
     try:
-        s3_key, file_id = generate_s3_key(filename, "pdfs")
+        # Create folder structure by date
+        today = datetime.now().strftime("%Y-%m-%d")
+        s3_key = f"pdfs/{today}/{file_id}_{filename}"
         
         # Upload to S3
         s3_client.put_object(
@@ -70,14 +49,12 @@ def upload_pdf_to_s3(file_bytes: bytes, filename: str) -> dict:
             }
         )
         
-        # Generate S3 URL
         s3_url = f"s3://{S3_BUCKET_NAME}/{s3_key}"
         
         return {
             "success": True,
-            "s3_key": s3_key,
-            "file_id": file_id,
-            "s3_url": s3_url
+            "s3_url": s3_url,
+            "s3_key": s3_key
         }
         
     except Exception as e:
@@ -87,37 +64,33 @@ def upload_pdf_to_s3(file_bytes: bytes, filename: str) -> dict:
         }
 
 
-def upload_testcases_to_s3(test_cases: dict, filename: str, file_id: str, format_type: str = "json") -> dict:
+def upload_testcases_to_s3(testcases_data: dict, original_filename: str, file_id: str, format_type: str = "json") -> dict:
     """
     Upload generated test cases to S3.
     
     Args:
-        test_cases: Test case data
-        filename: Original PDF filename
-        file_id: UUID for this upload session
-        format_type: 'json' or 'markdown'
+        testcases_data: Test cases data from Gemini
+        original_filename: Original PDF filename
+        file_id: Unique file identifier
+        format_type: Format type ('json' or 'markdown')
         
     Returns:
-        dict with s3_key and s3_url
+        dict with success status and S3 URL
     """
     try:
-        # Prepare filename
-        base_name = filename.replace('.pdf', '')
-        extension = 'json' if format_type == 'json' else 'md'
-        test_filename = f"{base_name}-testcases.{extension}"
+        today = datetime.now().strftime("%Y-%m-%d")
         
-        # Generate S3 key with same file_id
-        now = datetime.now()
-        s3_key = f"testcases/{now.year}/{now.month:02d}/{now.day:02d}/{file_id}-{test_filename}"
-        
-        # Prepare content
-        if format_type == 'json':
+        if format_type == "json":
+            # Save as JSON
             import json
-            content = json.dumps(test_cases, indent=2)
-            content_type = 'application/json'
+            content = json.dumps(testcases_data, indent=2)
+            s3_key = f"testcases/{today}/{file_id}_testcases.json"
+            content_type = "application/json"
         else:  # markdown
-            content = test_cases.get('text', str(test_cases))
-            content_type = 'text/markdown'
+            # Save as Markdown
+            content = testcases_data.get("text", "No test cases generated")
+            s3_key = f"testcases/{today}/{file_id}_testcases.md"
+            content_type = "text/markdown"
         
         # Upload to S3
         s3_client.put_object(
@@ -126,8 +99,10 @@ def upload_testcases_to_s3(test_cases: dict, filename: str, file_id: str, format
             Body=content.encode('utf-8'),
             ContentType=content_type,
             Metadata={
-                'original-pdf': filename,
-                'generated-at': datetime.now().isoformat()
+                'original-filename': original_filename,
+                'file-id': file_id,
+                'format': format_type,
+                'created-at': datetime.now().isoformat()
             }
         )
         
@@ -135,8 +110,9 @@ def upload_testcases_to_s3(test_cases: dict, filename: str, file_id: str, format
         
         return {
             "success": True,
+            "s3_url": s3_url,
             "s3_key": s3_key,
-            "s3_url": s3_url
+            "format": format_type
         }
         
     except Exception as e:
@@ -154,7 +130,7 @@ def get_file_from_s3(s3_key: str) -> dict:
         s3_key: S3 object key
         
     Returns:
-        dict with file content and metadata
+        dict with file content or error
     """
     try:
         response = s3_client.get_object(
@@ -167,24 +143,22 @@ def get_file_from_s3(s3_key: str) -> dict:
         return {
             "success": True,
             "content": content,
-            "content_type": response.get('ContentType'),
-            "metadata": response.get('Metadata', {})
+            "content_type": response.get('ContentType', 'application/octet-stream')
         }
         
     except Exception as e:
         return {
             "success": False,
-            "error": f"Failed to download from S3: {str(e)}"
+            "error": f"Failed to download file from S3: {str(e)}"
         }
 
 
-def list_files_from_s3(prefix: str = "", max_items: int = 100) -> dict:
+def list_files_from_s3(prefix: str = "") -> dict:
     """
     List files from S3 bucket.
     
     Args:
-        prefix: Folder prefix to filter (e.g., 'pdfs/', 'testcases/')
-        max_items: Maximum number of items to return
+        prefix: Optional prefix to filter files
         
     Returns:
         dict with list of files
@@ -192,17 +166,17 @@ def list_files_from_s3(prefix: str = "", max_items: int = 100) -> dict:
     try:
         response = s3_client.list_objects_v2(
             Bucket=S3_BUCKET_NAME,
-            Prefix=prefix,
-            MaxKeys=max_items
+            Prefix=prefix
         )
         
         files = []
-        for obj in response.get('Contents', []):
-            files.append({
-                "key": obj['Key'],
-                "size": obj['Size'],
-                "last_modified": obj['LastModified'].isoformat()
-            })
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat()
+                })
         
         return {
             "success": True,
@@ -231,3 +205,31 @@ def test_s3_connection() -> bool:
     except Exception as e:
         print(f"❌ S3 connection failed: {str(e)}")
         return False
+
+
+def delete_file_from_s3(s3_key: str) -> dict:
+    """
+    Delete a file from S3.
+    
+    Args:
+        s3_key: S3 object key
+        
+    Returns:
+        dict with success status
+    """
+    try:
+        s3_client.delete_object(
+            Bucket=S3_BUCKET_NAME,
+            Key=s3_key
+        )
+        
+        return {
+            "success": True,
+            "message": f"File deleted from S3: {s3_key}"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to delete file from S3: {str(e)}"
+        }

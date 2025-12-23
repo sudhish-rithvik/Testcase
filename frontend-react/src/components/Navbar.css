@@ -1,11 +1,14 @@
 .navbar {
-    background: var(--bg-secondary);
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     padding: var(--spacing-md) var(--spacing-xl);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     position: sticky;
     top: 0;
     z-index: 100;
     border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
 }
 
 .navbar-container {
@@ -18,37 +21,98 @@
 
 .logo {
     font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary-blue);
-    text-decoration: none;
+    font-weight: 800;
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    text-decoration: none;
+    transition: all 0.3s ease;
 }
 
 .logo-icon {
-    font-size: 1.8rem;
+    font-size: 2rem;
+    filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.3));
+}
+
+.logo-text {
+    background: linear-gradient(135deg, var(--primary-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo:hover {
+    transform: translateY(-2px);
 }
 
 .nav-links {
     display: flex;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-sm);
     list-style: none;
     margin: 0;
     padding: 0;
+    align-items: center;
 }
 
 .nav-links a {
     text-decoration: none;
     color: var(--text-secondary);
-    font-weight: 500;
+    font-weight: 600;
     padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--radius-md);
-    transition: all 0.2s;
+    border-radius: var(--radius-full);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.nav-links a::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-blue), var(--accent-purple));
+    transform: translateX(-50%);
+    transition: width 0.3s ease;
+}
+
+.nav-links a:hover::before {
+    width: 80%;
 }
 
 .nav-links a:hover,
 .nav-links a.active {
     color: var(--primary-blue);
     background: rgba(37, 99, 235, 0.1);
+}
+
+.theme-toggle {
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle:hover {
+    transform: rotate(15deg) scale(1.1);
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+@media (max-width: 768px) {
+    .navbar-container {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 }

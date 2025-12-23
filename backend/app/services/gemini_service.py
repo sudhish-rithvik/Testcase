@@ -8,7 +8,7 @@ from google.genai.types import GenerateContentConfig, GoogleSearch
 load_dotenv()
 
 # Initialize Gemini client
-API_KEY = os.getenv("GEMINI_API_KEY")
+API_KEY = "AIzaSyCz660TGkZrohKXQawD5NknVpPDePBfS-I"
 
 if not API_KEY:
     raise ValueError("GEMINI_API_KEY not found in environment variables")

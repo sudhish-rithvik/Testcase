@@ -57,8 +57,13 @@ async def upload_pdf(file: UploadFile = File(...)):
                 detail="PDF does not contain sufficient text content. Minimum 50 characters required."
             )
         
+        
+        # Generate unique file ID
+        import uuid
+        file_id = str(uuid.uuid4())
+        
         # Upload original PDF to S3
-        s3_upload_result = upload_pdf_to_s3(pdf_bytes, file.filename)
+        s3_upload_result = upload_pdf_to_s3(pdf_bytes, file.filename, file_id)
         
         if not s3_upload_result["success"]:
             raise HTTPException(
@@ -66,7 +71,6 @@ async def upload_pdf(file: UploadFile = File(...)):
                 detail=f"Failed to upload PDF to S3: {s3_upload_result.get('error')}"
             )
         
-        file_id = s3_upload_result["file_id"]
         pdf_s3_url = s3_upload_result["s3_url"]
         
         # Generate healthcare test cases using Gemini AI

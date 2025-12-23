@@ -177,3 +177,32 @@ def test_dynamodb_connection() -> bool:
     except Exception as e:
         print(f"❌ DynamoDB connection failed: {str(e)}")
         return False
+
+
+def delete_metadata(file_id: str) -> dict:
+    """
+    Delete metadata for a file from DynamoDB.
+    
+    Args:
+        file_id: Unique file identifier
+        
+    Returns:
+        dict with success status
+    """
+    try:
+        table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+        
+        table.delete_item(
+            Key={'file_id': file_id}
+        )
+        
+        return {
+            "success": True,
+            "message": f"Metadata deleted for file: {file_id}"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to delete metadata: {str(e)}"
+        }
