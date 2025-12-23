@@ -1,87 +1,73 @@
-import requests
+import os
 import time
-import random
+import requests
+from dotenv import load_dotenv
+from google import genai
+from google.genai.types import GenerateContentConfig, GoogleSearch
 
-# 1. Use a stable model with better rate limits
-# gemini-2.5-flash is the newest stable model (June 2025) with excellent rate limits
+load_dotenv()
+
+# Initialize Gemini client
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    raise ValueError("GEMINI_API_KEY not found in environment variables")
+
+client = genai.Client(api_key=API_KEY)
 MODEL_NAME = "gemini-2.5-flash"
 
-# 2. Hardcode your NEW API Key here (ensure NO spaces inside the quotes)
-API_KEY = "AIzaSyAWEYhyz5au9vV04QQ8GG7YMIXARxUPtss"  
+# Retry configuration
+MAX_RETRIES = 3
+INITIAL_RETRY_DELAY = 2  # seconds
+TIMEOUT = 120  # seconds
 
-def call_gemini(prompt: str):
-    # Using v1beta as it supports the newest 2.x models shown in your list
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={API_KEY}"
 
-    payload = {
-        "contents": [
-            {
-                "parts": [{"text": prompt}]
-            }
-        ]
-    }
-
-    headers = {"Content-Type": "application/json"}
-
-    max_retries = 3
-    base_delay = 2  # seconds
-
-    for attempt in range(max_retries + 1):
+def generate_testcases_with_retry(pdf_content: str):
+    """
+    Generate test cases with exponential backoff retry logic.
+    """
+    for attempt in range(MAX_RETRIES):
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=120)
-
-            if response.status_code == 429:
-                if attempt < max_retries:
-                    # Exponential backoff with jitter
-                    wait_time = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
-                    print(f"Gemini API rate limit hit (429). Retrying in {wait_time:.2f} seconds... (Attempt {attempt + 1}/{max_retries})")
-                    time.sleep(wait_time)
+            return generate_healthcare_testcases(pdf_content)
+        except Exception as e:
+            error_str = str(e)
+            
+            # Handle different error types
+            if "429" in error_str or "Resource has been exhausted" in error_str:
+                # Rate limit error
+                if attempt < MAX_RETRIES - 1:
+                    delay = INITIAL_RETRY_DELAY * (2 ** attempt)
+                    print(f"Rate limit hit. Retrying in {delay} seconds... (Attempt {attempt + 1}/{MAX_RETRIES})")
+                    time.sleep(delay)
                     continue
                 else:
-                    # Return distinct error if max retries hit
-                    return {
-                        "error": "Gemini API rate limit exceeded after multiple retries",
-                        "status_code": 429,
-                        "details": response.json() if response.content else response.text
-                    }
-
-            if response.status_code != 200:
-                return {
-                    "error": "Gemini API failed",
-                    "status_code": response.status_code,
-                    "details": response.json() if response.content else response.text
-                }
-
-            data = response.json()
+                    raise Exception("Rate limit exceeded after all retries")
             
-            # Safe extraction of text
-            if "candidates" in data and data["candidates"]:
-                return {
-                    "text": data["candidates"][0]["content"]["parts"][0]["text"],
-                    "model": data.get("modelVersion"),
-                    "usage": data.get("usageMetadata"),
-                }
+            elif "timeout" in error_str.lower() or "Timeout" in error_str:
+                # Timeout error
+                if attempt < MAX_RETRIES - 1:
+                    delay = INITIAL_RETRY_DELAY * (2 ** attempt)
+                    print(f"Request timeout. Retrying in {delay} seconds... (Attempt {attempt + 1}/{MAX_RETRIES})")
+                    time.sleep(delay)
+                    continue
+                else:
+                    raise Exception("Request timed out after all retries")
+            
+            elif "SSLEOFError" in error_str or "SSL" in error_str:
+                # SSL/Connection error
+                if attempt < MAX_RETRIES - 1:
+                    delay = INITIAL_RETRY_DELAY * (2 ** attempt)
+                    print(f"SSL error. Retrying in {delay} seconds... (Attempt {attempt + 1}/{MAX_RETRIES})")
+                    time.sleep(delay)
+                    continue
+                else:
+                    raise Exception("SSL connection failed after all retries")
+            
             else:
-                return {"error": "No candidates returned", "raw_response": data}
-
-        except requests.exceptions.Timeout:
-            if attempt < max_retries:
-                wait_time = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
-                print(f"Gemini API timeout. Retrying in {wait_time:.2f} seconds... (Attempt {attempt + 1}/{max_retries})")
-                time.sleep(wait_time)
-                continue
-            else:
-                return {"error": "Gemini API timeout after multiple retries"}
-        except requests.exceptions.SSLError as ssl_err:
-            if attempt < max_retries:
-                wait_time = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
-                print(f"SSL connection error. Retrying in {wait_time:.2f} seconds... (Attempt {attempt + 1}/{max_retries})")
-                time.sleep(wait_time)
-                continue
-            else:
-                return {"error": f"SSL connection failed after multiple retries: {str(ssl_err)}"}
-        except Exception as e:
-            return {"error": f"Connection error: {str(e)}"}
+                # Unknown error - raise immediately
+                raise e
+    
+    raise Exception("Failed after all retry attempts")
 
 
 def generate_healthcare_testcases(pdf_content: str):
@@ -94,185 +80,218 @@ def generate_healthcare_testcases(pdf_content: str):
     Returns:
         dict with generated test cases and solutions
     """
-    # Enhanced prompt for superior healthcare test case generation
-    prompt = f"""You are a senior healthcare software QA engineer with expertise in medical software testing, HIPAA compliance, and clinical workflows.
+    # Enhanced prompt focused on clinical guidelines and CDSS testing
+    prompt = f"""You are an expert QA engineer specializing in Clinical Decision Support Systems (CDSS) and medical software testing.
 
-HEALTHCARE DOCUMENT TO ANALYZE:
+CLINICAL GUIDELINE/PROTOCOL DOCUMENT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {pdf_content[:20000]}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+CONTEXT:
+This document contains clinical guidelines, treatment protocols, diagnostic pathways, hospital SOPs, or care guidelines that define decision logic for Clinical Decision Support Systems. These guidelines contain:
+- Decision paths and branching logic
+- Clinical thresholds and boundaries
+- Exception handling rules
+- Escalation protocols
+- Multi-condition scenarios (symptoms + age + vitals)
+
 YOUR MISSION:
-Analyze this healthcare document and generate production-ready test cases following industry best practices for medical software testing.
+Generate **8-10 focused, high-value test cases** that validate the decision logic and rule-based behavior described in this clinical guideline. Focus on:
 
-OUTPUT STRUCTURE (Use this exact format):
+1. **Decision Path Testing**: Test different clinical decision branches
+2. **Threshold Validation**: Test boundary conditions and clinical thresholds
+3. **Multi-Condition Scenarios**: Test combined conditions (e.g., symptom + age + vitals)
+4. **Incomplete Data Handling**: Test missing or partial patient data
+5. **Conflicting Rules**: Test scenarios where guidelines may conflict
+6. **Edge Cases**: Test unusual but valid clinical situations
 
-# TEST SUITE: [Feature/Module Name]
+STRICT REQUIREMENTS:
+- Generate **ONLY 8-10 test cases total** (not more!)
+- Focus on **decision logic and rule validation**
+- Include **specific clinical values** (vital signs, lab results, ages, etc.)
+- Cover **both normal and edge cases**
+- Prioritize **safety-critical scenarios**
 
-## 📋 FEATURE OVERVIEW
-- **Description**: [Brief description of the feature]
-- **Healthcare Domain**: [e.g., EHR, Telemedicine, Lab Management, etc.]
-- **Criticality**: [Critical/High/Medium/Low]
-- **Compliance Requirements**: [HIPAA, HL7, FHIR, FDA, etc.]
+OUTPUT FORMAT:
 
----
+# Test Suite: [Clinical Guideline Name]
 
-## ✅ POSITIVE TEST CASES
-
-### TC-[ID]: [Test Case Title]
-**Priority**: [P0-Critical / P1-High / P2-Medium / P3-Low]  
-**Category**: [Functional/Integration/UI/Performance]
-
-**Preconditions**:
-- [Condition 1]
-- [Condition 2]
-
-**Test Steps**:
-1. [Detailed step 1]
-2. [Detailed step 2]
-3. [Continue...]
-
-**Test Data**:
-- [Specific test data with examples]
-- Example: PatientID: "P123456", DOB: "01/01/1980"
-
-**Expected Result**:
-- [Clear, measurable expected outcome]
-
-**Healthcare-Specific Validations**:
-- [ ] Data privacy maintained (PHI not exposed)
-- [ ] Audit trail created
-- [ ] User permissions verified
-- [ ] Clinical accuracy validated
+## Overview
+**Guideline Type**: [Treatment Protocol / Diagnostic Pathway / ICU Protocol / Emergency Care]
+**Criticality**: Critical
+**Focus**: CDSS Decision Logic Validation
 
 ---
 
-## ❌ NEGATIVE TEST CASES
+## Test Cases
 
-### TC-[ID]: [Test Case Title]
-[Same structure as positive tests, focusing on error scenarios]
+### TC-001: [Decision Path Title]
+**Priority**: P0-Critical
+**Type**: Decision Path Validation
 
----
+**Scenario**: [Describe the clinical scenario]
 
-## 🔒 SECURITY TEST CASES
+**Input Conditions**:
+- Patient Age: [value]
+- Vital Signs: [BP, HR, Temp, O2 Sat, etc.]
+- Symptoms: [list]
+- Lab Results: [if applicable]
+- Medical History: [relevant details]
 
-### TC-[ID]: [Test Case Title]
-**Focus**: [Authentication/Authorization/Encryption/Audit/Data Privacy]
+**Expected Decision/Action**:
+- System should: [expected behavior]
+- Alert/Recommendation: [what the CDSS should recommend]
+- Rationale: [why this decision based on guideline]
 
-[Include specific healthcare security concerns:]
-- HIPAA violation prevention
-- PHI/PII protection
-- Role-based access control
-- Session management
-- SQL injection prevention
-- XSS prevention
-
----
-
-## ⚡ EDGE CASES & BOUNDARY CONDITIONS
-
-### TC-[ID]: [Test Case Title]
-[Test unusual but valid scenarios:]
-- Maximum field lengths
-- Special characters in medical data
-- Concurrent user access
-- Network interruptions during critical operations
-- Extremely large datasets
+**Validation Points**:
+- ✓ Decision logic follows guideline Section X.Y
+- ✓ All conditions properly evaluated (AND/OR logic)
+- ✓ Recommendation matches protocol
+- ✓ Escalation triggered if needed
 
 ---
 
-## 🏥 HEALTHCARE-SPECIFIC SCENARIOS
+### TC-002: [Boundary Condition Title]
+**Priority**: P0-Critical
+**Type**: Threshold Validation
 
-### TC-[ID]: Emergency Scenario - [Title]
-**Critical Path**: Yes/No
-**Response Time Requirement**: [e.g., < 2 seconds]
+**Scenario**: [Test a clinical threshold boundary]
 
-[Test emergency scenarios:]
-- Code Blue situations
-- Urgent medication orders
-- Critical lab results
-- Emergency patient registration
+**Input Conditions**:
+- [Specific values at or near thresholds]
+- Example: BP = 140/90 (exactly at hypertension threshold)
 
----
+**Expected Decision/Action**:
+- [What should happen at this exact threshold]
 
-## 🔄 INTEGRATION TEST CASES
-
-### TC-[ID]: [System Integration Title]
-[Test integrations with:]
-- HL7 message exchange
-- FHIR API calls
-- Medical device interfaces
-- Pharmacy systems
-- Insurance verification systems
-- Lab information systems
+**Edge Cases to Test**:
+- Value just below threshold: [expected result]
+- Value at threshold: [expected result]
+- Value just above threshold: [expected result]
 
 ---
 
-## 💊 MEDICATION SAFETY TEST CASES
+### TC-003: [Multi-Condition Scenario]
+**Priority**: P1-High
+**Type**: Combined Conditions
 
-### TC-[ID]: [Medication Safety Title]
-[Test critical medication workflows:]
-- Drug-drug interactions
-- Allergy checking
-- Dosage calculation validation
-- Duplicate medication prevention
-- High-risk medication alerts
+**Scenario**: [Test multiple conditions together]
 
----
+**Input Conditions**:
+- Condition 1: [e.g., Age > 65]
+- Condition 2: [e.g., Fever > 38.5°C]
+- Condition 3: [e.g., Low O2 Sat < 92%]
 
-## 📊 DATA VALIDATION & ACCURACY
-
-### TC-[ID]: [Data Validation Title]
-[Test medical data accuracy:]
-- Vital signs range validation
-- ICD-10 code validation
-- CPT code validation
-- Laboratory result ranges
-- Medical terminology standardization
+**Expected Decision/Action**:
+- [How system should handle multiple conditions]
+- Priority: [which condition takes precedence]
 
 ---
 
-## 🎯 RECOMMENDED SOLUTIONS & IMPLEMENTATION NOTES
+### TC-004: [Incomplete Data Handling]
+**Priority**: P1-High
+**Type**: Missing Data
 
-**For Developers:**
-1. [Specific implementation suggestion]
-2. [Security best practice]
-3. [Performance optimization tip]
+**Scenario**: [Test guideline with missing patient data]
 
-**For QA Team:**
-1. [Testing strategy recommendation]
-2. [Automation opportunity]
-3. [Risk mitigation approach]
+**Input Conditions**:
+- Available Data: [list]
+- Missing Data: [critical missing fields]
 
-**Compliance Checklist:**
-- [ ] HIPAA Security Rule compliance verified
-- [ ] HIPAA Privacy Rule compliance verified
-- [ ] Minimum necessary principle applied
-- [ ] Business Associate Agreement requirements met
-- [ ] Breach notification procedures tested
+**Expected System Behavior**:
+- Should request: [missing data fields]
+- Should/Should Not proceed: [Yes/No]
+- Fallback protocol: [if any]
 
 ---
 
-## 🚨 CRITICAL ISSUES TO WATCH
+### TC-005: [Conflicting Guidelines]
+**Priority**: P1-High  
+**Type**: Rule Conflict
 
-1. [Potential security vulnerability]
-2. [Data integrity concern]
-3. [Compliance risk]
+**Scenario**: [Test conflicting clinical rules]
+
+**Input Conditions**:
+- [Conditions that might trigger conflicting rules]
+
+**Expected Decision/Action**:
+- Resolution: [how conflict should be resolved]
+- Priority: [which guideline takes precedence]
 
 ---
 
-QUALITY REQUIREMENTS FOR YOUR OUTPUT:
-✓ Each test case must be executable without ambiguity
-✓ Include specific, realistic healthcare test data
-✓ Cover ALL mentioned features in the document
-✓ Prioritize test cases (P0/P1/P2/P3)
-✓ Include traceability to requirements
-✓ Provide both manual and automation guidance
-✓ Consider multi-user and concurrent access scenarios
-✓ Include performance benchmarks where applicable
-✓ Add specific HIPAA compliance checkpoints
-✓ Ensure clinical workflow integrity
+Continue with TC-006 through TC-010 following this pattern, covering:
+- Normal/Happy path scenarios
+- Different age groups (pediatric vs adult vs geriatric)
+- Different severity levels
+- Emergency vs non-emergency pathways
+- Medication contraindications (if applicable)
 
-Generate comprehensive test cases NOW."""
+## Implementation Notes
 
-    return call_gemini(prompt)
+**Key Decision Points from Guideline**:
+1. [List main decision points]
+2. [List thresholds]
+3. [List escalation criteria]
+
+**Test Data Requirements**:
+- Patient demographics (various ages, genders)
+- Vital sign ranges (normal, borderline, critical)
+- Lab value ranges
+- Symptom combinations
+
+**Compliance Checks**:
+- HIPAA: Ensure test data is de-identified
+- Clinical Accuracy: Validate against actual guideline
+- Safety: Test all safety-critical decision paths
+
+---
+
+**REMEMBER**: Generate exactly **8-10 concise, focused test cases** that validate the clinical decision logic. Quality over quantity!
+
+"""
+    
+    try:
+        # Call Gemini API
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=GenerateContentConfig(
+                system_instruction="You are an expert healthcare software QA engineer specializing in Clinical Decision Support Systems testing.",
+                temperature=0.7,
+                top_p=0.95,
+                max_output_tokens=8000,
+                response_modalities=["TEXT"],
+            )
+        )
+        
+        # Extract the generated test cases
+        test_cases_text = response.text if hasattr(response, 'text') else ""
+        
+        # Get usage metadata if available
+        usage = {}
+        if hasattr(response, 'usage_metadata'):
+            usage = {
+                "prompt_tokens": getattr(response.usage_metadata, 'prompt_token_count', 0),
+                "completion_tokens": getattr(response.usage_metadata, 'candidates_token_count', 0),
+                "total_tokens": getattr(response.usage_metadata, 'total_token_count', 0)
+            }
+        
+        return {
+            "text": test_cases_text,
+            "model": MODEL_NAME,
+            "usage": usage,
+            "status": "success"
+        }
+        
+    except Exception as e:
+        error_msg = f"Test case generation failed: {str(e)}"
+        print(f"Gemini API error: {error_msg}")
+        return {
+            "text": f"Error: {error_msg}",
+            "model": MODEL_NAME,
+            "usage": {},
+            "status": "error",
+            "error": error_msg
+        }

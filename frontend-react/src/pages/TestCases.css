@@ -1,0 +1,60 @@
+.testcase-content {
+    line-height: 1.8;
+}
+
+.testcase-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 1.5rem 0 1rem 0;
+    color: var(--primary-blue);
+}
+
+.testcase-main-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.75rem 0;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.testcase-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.testcase-text {
+    margin: 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.testcase-list-item {
+    margin-left: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.no-testcases {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.loading {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(37, 99, 235, 0.2);
+    border-radius: 50%;
+    border-top-color: var(--primary-blue);
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

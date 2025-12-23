@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, JSONResponse
-from app.services.s3_service import get_file_from_s3, list_files_from_s3
-from app.services.dynamodb_service import get_metadata, list_all_files
+from app.services.s3_service import get_file_from_s3, list_files_from_s3, delete_file_from_s3
+from app.services.dynamodb_service import get_metadata, list_all_files, delete_metadata
 
 router = APIRouter()
 
@@ -178,7 +178,6 @@ async def get_upload_history(limit: int = 50):
         }
 
 
-
 @router.get("/file/{file_id}")
 async def get_file_info(file_id: str):
     """
@@ -202,3 +201,61 @@ async def get_file_info(file_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve file info: {str(e)}")
+
+
+@router.delete("/file/{file_id}")
+async def delete_file(file_id: str):
+    """
+    Delete a file and all associated data from S3 and DynamoDB.
+    
+    Args:
+        file_id: Unique file identifier
+        
+    Returns:
+        Success message
+    """
+    try:
+        # Get metadata first to find S3 keys
+        metadata_result = get_metadata(file_id)
+        
+        if not metadata_result["success"]:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        metadata = metadata_result["metadata"]
+        
+        # Delete from S3
+        s3_keys_to_delete = []
+        
+        # PDF
+        if metadata.get("pdf_s3_url"):
+            s3_keys_to_delete.append(metadata["pdf_s3_url"].split('/', 3)[3])
+        
+        # JSON test cases
+        if metadata.get("testcases_json_url"):
+            s3_keys_to_delete.append(metadata["testcases_json_url"].split('/', 3)[3])
+        
+        # Markdown test cases
+        if metadata.get("testcases_md_url"):
+            s3_keys_to_delete.append(metadata["testcases_md_url"].split('/', 3)[3])
+        
+        # Delete each S3 object
+        for s3_key in s3_keys_to_delete:
+            delete_result = delete_file_from_s3(s3_key)
+            if not delete_result["success"]:
+                print(f"Warning: Failed to delete S3 key {s3_key}: {delete_result.get('error')}")
+        
+        # Delete from DynamoDB
+        delete_db_result = delete_metadata(file_id)
+        
+        if not delete_db_result["success"]:
+            raise HTTPException(status_code=500, detail=delete_db_result.get("error"))
+        
+        return {
+            "success": True,
+            "message": f"File {file_id} deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
